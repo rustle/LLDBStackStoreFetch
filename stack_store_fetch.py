@@ -60,6 +60,10 @@ def fetch_stack(debugger, command, result, dict):
 			appended_stack = "Reconstructed stack trace for " + key + "\n" + str(current_stack) + str(originating_stack)
 			return appended_stack
 
+def print_stack(debugger, command, result, dict):
+	stack_trace = fetch_stack(debugger, command, result, dict)
+	print stack_trace
+
 def append_stack(debugger, command, result, dict):
 	key = key_for_command(command)
 	if key:
@@ -97,4 +101,5 @@ def __lldb_init_module(debugger, dict):
 	debugger.HandleCommand('command script add -f stack_store_fetch.store_stack store_stack')
 	debugger.HandleCommand('command script add -f stack_store_fetch.fetch_stack fetch_stack')
 	debugger.HandleCommand('command script add -f stack_store_fetch.append_stack append_stack')
+	debugger.HandleCommand('command script add -f stack_store_fetch.print_stack print_stack')
 	print '"BTStoreFetch" commands installed'
