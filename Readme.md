@@ -17,6 +17,7 @@ Then run the app and see the reconstructed stack trace
 #Things that don't work
 
 * Setting symbolic breakpoints works from the script, but I can't suss out the syntax for callbacks or how to autocontinue after the callback
+* There is a set_dispatch_breakpoints function now, but if you use that instead of making the breakpoints manually, it never reaches the second breakpoint and doesn't resolve expressions correctly
 
 #Future plans
 

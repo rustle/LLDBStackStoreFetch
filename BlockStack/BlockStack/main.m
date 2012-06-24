@@ -10,9 +10,11 @@
 
 void bar(void)
 {
-	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(void) {
-		
-	});
+	__block id block = ^(void) {
+		printf("%p\n", block);
+	};
+	printf("%p\n", block);
+	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), block);
 }
 
 void foo(void)
@@ -25,11 +27,7 @@ int main(int argc, const char * argv[])
 	@autoreleasepool {
 		foo();
 		
-		// dead lock on purpose too let the async call finish
-		dispatch_sync(dispatch_get_main_queue(), ^(void) {
-			
-		});
+		dispatch_main();
 	}
     return 0;
 }
-
