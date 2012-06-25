@@ -23,11 +23,14 @@ import shlex
 import lldbutil
 from optparse import OptionParser
 
-def key_for_command(command):
+def parse_command(command):
 	parser = OptionParser()
 	parser.add_option("-k", "--key", action="store", type="string", dest="key")
 	parser.add_option("-a", "--argument", action="store", type="string", dest="argument")
 	(options, args) = parser.parse_args(shlex.split(command))
+	return options
+
+def key_for_options(options):
 	if options.key:
 		return options.key
 	elif options.argument:
@@ -55,12 +58,14 @@ def GetStackHashMap(key):
 	return stack_hash_map[key]
 
 def store_stack(debugger, command, result, dict):
-	key = key_for_command(command)
+	options = parse_command(command)
+	key = key_for_options(options)
 	if key:
 		SetStackHashMap(key, lldbutil.print_stacktrace(lldb.thread, True))
 
 def print_stack(debugger, command, result, dict):
-	key = key_for_command(command)
+	options = parse_command(command)
+	key = key_for_options(options)
 	if key:
 		if key in stack_hash_map:
 			originating_stack = stack_hash_map[key]
@@ -69,25 +74,24 @@ def print_stack(debugger, command, result, dict):
 			print appended_stack
 
 def append_stack(debugger, command, result, dict):
-	key = key_for_command(command)
+	options = parse_command(command)
+	key = key_for_options(options)
 	if key:
 		current_stack = lldbutil.print_stacktrace(lldb.thread, True)
 		if key in stack_hash_map:
 			originating_stack = stack_hash_map[key]
 			appended_stack = str(current_stack) + str(originating_stack)
 			SetStackHashMap(key, appended_stack)
-			return appended_stack
 		else:
 			SetStackHashMap(key, current_stack)
-			return current_stack
 
 def set_dispatch_breakpoints(debugger, command, result, dict):
 	debugger.HandleCommand('breakpoint set -F dispatch_async')
 	breakpointcount = lldb.target.GetNumBreakpoints()
-	debugger.HandleCommand("breakpoint command add -s command {index} -o 'store_stack -a $arg2'".format(index=breakpointcount))
+	debugger.HandleCommand("breakpoint command add -s python {index} -o 'lldb.debugger.HandleCommand(\"store_stack -a $arg2\"); lldb.process.Continue()'".format(index=breakpointcount))
 	debugger.HandleCommand('breakpoint set -F _dispatch_call_block_and_release')
 	breakpointcount = lldb.target.GetNumBreakpoints()
-	lldb.debugger.HandleCommand("breakpoint command add -s command {index} -o 'print_stack -a $arg1'".format(index=breakpointcount))
+#	debugger.HandleCommand("breakpoint command add -s python {index} -o 'lldb.debugger.HandleCommand(\"print_stack -a $arg1\"); lldb.process.Continue()'".format(index=breakpointcount))
 
 def __lldb_init_module(debugger, dict):
 	# This initializer is being run from LLDB in the embedded command interpreter
