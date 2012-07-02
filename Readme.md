@@ -18,15 +18,23 @@ Then run the app and see the reconstructed stack trace
 
 Option 2:
 
-Add a auto-continuing breakpoint as early in your app as possible (probably main) and set it's debug command to set_dispatch_breakpoints
+Mess around with using set_dispatch_breakpoints, which has produced extremely inconsistent results for me. I can usually get the break points to call (although not always), but the expressions evaluated are corrupted.
 
-This will cause the app to stop on _dispatch_call_block_and_release where you can fetch the trace using 
+Option 3:
 
-print_stack -a $arg1
+Mess around with notification stack traces with breakpoints:
+
+_CFXNotificationPost
+store_stack -a $arg2
+
+and
+
+-[__NSObserver _doit:]
+print_stack -a $arg3
 
 #Things that don't work
 
-* Setting symbolic breakpoints works from the script and there is a set_dispatch_breakpoints function now, but the second breakpoint is commented out because it doesn't behave correctly (the debug command is executed, but expressions are corrupted and the actual breakpoint never hits)
+* Setting symbolic breakpoints works from the script and there is a set_dispatch_breakpoints function now, but the second breakpoint is commented out because it doesn't behave correctly (the debug command is executed, but expressions are corrupted)
 
 #Future plans
 

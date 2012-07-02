@@ -38,7 +38,18 @@ def key_for_options(options):
 		# hopefully I can find a better
 		# way to do this
 		argument = str(options.argument)
-		key = str(lldb.thread.GetFrameAtIndex(0).EvaluateExpression(argument).GetObjectDescription())
+		result = lldb.thread.GetFrameAtIndex(0).EvaluateExpression(argument)
+		key = str(result.GetObjectDescription())
+		# Not sure why I need to do this filtering
+		# My python isn't great
+		if key == "<nil>":
+			key = None
+		if key == "None":
+			key = None
+		if key:
+			print "Key {k} for {a}".format(k=key,a=options.argument)
+		else:
+			print "Unable to get a key for {a}".format(a=options.argument)
 		return key
 	else:
 		return None
@@ -58,12 +69,14 @@ def GetStackHashMap(key):
 	return stack_hash_map[key]
 
 def store_stack(debugger, command, result, dict):
+	print "Store"
 	options = parse_command(command)
 	key = key_for_options(options)
 	if key:
 		SetStackHashMap(key, lldbutil.print_stacktrace(lldb.thread, True))
 
 def print_stack(debugger, command, result, dict):
+	print "Print"
 	options = parse_command(command)
 	key = key_for_options(options)
 	if key:
@@ -86,12 +99,10 @@ def append_stack(debugger, command, result, dict):
 			SetStackHashMap(key, current_stack)
 
 def set_dispatch_breakpoints(debugger, command, result, dict):
-	debugger.HandleCommand('breakpoint set -F dispatch_async')
-	breakpointcount = lldb.target.GetNumBreakpoints()
-	debugger.HandleCommand("breakpoint command add -s python {index} -o 'lldb.debugger.HandleCommand(\"store_stack -a $arg2\"); lldb.process.Continue()'".format(index=breakpointcount))
-	debugger.HandleCommand('breakpoint set -F _dispatch_call_block_and_release')
-	breakpointcount = lldb.target.GetNumBreakpoints()
-#	debugger.HandleCommand("breakpoint command add -s python {index} -o 'lldb.debugger.HandleCommand(\"print_stack -a $arg1\"); lldb.process.Continue()'".format(index=breakpointcount))
+	bp = lldb.target.BreakpointCreateByName('dispatch_async')
+	debugger.HandleCommand("breakpoint command add -s python {id} -o 'lldb.debugger.HandleCommand(\"store_stack -a $arg2\"); lldb.process.Continue()'".format(id=bp.GetID()))
+	bp = lldb.target.BreakpointCreateByName('_dispatch_call_block_and_release')
+#	debugger.HandleCommand("breakpoint command add -s python {id} -o 'lldb.debugger.HandleCommand(\"print_stack -a $arg1\"); lldb.process.Continue()'".format(id=bp.GetID()))
 
 def __lldb_init_module(debugger, dict):
 	# This initializer is being run from LLDB in the embedded command interpreter
