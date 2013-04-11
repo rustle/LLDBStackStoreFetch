@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   type = "4"
+   version = "1.0">
+   <SymbolicBreakpoints>
+      <SymbolicBreakpoint
+         shouldBeEnabled = "Yes"
+         ignoreCount = "0"
+         continueAfterRunningActions = "Yes"
+         symbolName = "dispatch_async"
+         moduleName = "">
+         <Actions>
+            <BreakpointActionProxy
+               ActionType = "Xcode.BreakpointAction.DebuggerCommand">
+               <ActionContent
+                  consoleCommand = "store_stack -a $arg2">
+               </ActionContent>
+            </BreakpointActionProxy>
+         </Actions>
+      </SymbolicBreakpoint>
+      <SymbolicBreakpoint
+         shouldBeEnabled = "Yes"
+         ignoreCount = "0"
+         continueAfterRunningActions = "Yes"
+         symbolName = "_dispatch_call_block_and_release"
+         moduleName = "">
+         <Actions>
+            <BreakpointActionProxy
+               ActionType = "Xcode.BreakpointAction.DebuggerCommand">
+               <ActionContent
+                  consoleCommand = "print_stack -a $arg1">
+               </ActionContent>
+            </BreakpointActionProxy>
+         </Actions>
+      </SymbolicBreakpoint>
+   </SymbolicBreakpoints>
+</Bucket>

@@ -39,7 +39,3 @@ print_stack -a $arg3
 #Future plans
 
 * verbosity settings to be able to get more detailed info from stack traces
-
-#PSA
-
-If you make any changes to the script and you're running an unreleased build of a popular lldb using ide, you'll need to restart it after each change.

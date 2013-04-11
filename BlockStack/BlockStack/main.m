@@ -8,39 +8,38 @@
 
 #import <Foundation/Foundation.h>
 
-void bar(void)
+static void bar(void)
 {
 	id block = ^(void) {
 		// NSLog will cause some dispatch to happen, so printf can help bring down the noise level
-		printf("test");
-//		NSLog(@"test");
+		printf("test\n");
 	};
 	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), block);
 }
 
-void foo(void)
+static void foo(void)
 {
 	bar();
 }
 
-void blocks(void)
+static void blocks(void)
 {
 	foo();
 }
 
-NSOperationQueue *queue;
+static NSOperationQueue *queue;
 
-void bat()
+static void bat()
 {
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"Test" object:nil];
 }
 
-void baz()
+static void baz()
 {
 	bat();
 }
 
-void notifications(void)
+static void notifications(void)
 {
 	queue = [NSOperationQueue new];
 	
