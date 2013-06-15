@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-static void bar(void)
+NS_INLINE void bar(NSString *string)
 {
 	id block = ^(void) {
 		// NSLog will cause some dispatch to happen, so printf can help bring down the noise level
@@ -19,7 +19,11 @@ static void bar(void)
 
 static void foo(void)
 {
-	bar();
+	char * test = "testing";
+	NSString *foo = @"bar";
+	NSString *__strong*baz = &foo;
+	int scalar = 10;
+	bar(foo);
 }
 
 static void blocks(void)
@@ -27,35 +31,10 @@ static void blocks(void)
 	foo();
 }
 
-static NSOperationQueue *queue;
-
-static void bat()
-{
-	[[NSNotificationCenter defaultCenter] postNotificationName:@"Test" object:nil];
-}
-
-static void baz()
-{
-	bat();
-}
-
-static void notifications(void)
-{
-	queue = [NSOperationQueue new];
-	
-	[[NSNotificationCenter defaultCenter] addObserverForName:@"Test" object:nil queue:queue usingBlock:^(NSNotification *note) {
-		
-	}];
-	
-	baz();
-}
-
 int main(int argc, const char * argv[])
 {
 	@autoreleasepool {
 		blocks();
-		
-		notifications();
 		
 		dispatch_main();
 	}
