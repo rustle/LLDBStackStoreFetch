@@ -19,6 +19,9 @@ NS_INLINE void bar(NSString *string)
 
 static void foo(void)
 {
+	struct aStruct { int i; };
+	struct aStruct aLocalStruct = { 0 };
+	struct aStruct * aLocalStructRef = &aLocalStruct;
 	char * test = "testing";
 	NSString *foo = @"bar";
 	NSString *__strong*baz = &foo;

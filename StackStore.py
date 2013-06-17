@@ -22,6 +22,147 @@ import commands
 import shlex
 from optparse import OptionParser
 
+#TODO add type to indicate local var vs argument var
+
+def RSTLAppendValue(name, value, string):
+	if len(string) > 1:
+		string += ","
+	string += "'{name}': '{value}'".format(name=name, value=value)
+	return string
+
+class RSTLCapturedVariable(object):
+	# A captured local var or function argument from a stack frame
+	_name = None
+	_value = None
+	_dereference = None
+	_string_description = None
+	_summary = None
+	_is_pointer = False
+	def __init__(self, variable):
+		name = variable.name
+		if name:
+			self.name = name
+		value = variable.value
+		if value:
+			self.value = value
+		summary = variable.summary
+		if summary:
+			self.summary = summary
+		else:
+			if variable.type.is_pointer:
+				self.is_pointer = True
+				deref = variable.deref;
+				self.dereference = RSTLCapturedVariable(deref)
+			else:
+				self.string_description = str(variable)
+	@property
+	def name(self):
+		return self._name
+	@name.setter
+	def name(self, value):
+		self._name = value
+	@property
+	def value(self):
+		return self._value
+	@value.setter
+	def value(self, value):
+		self._value = value
+	@property
+	def dereference(self):
+		return self._dereference
+	@dereference.setter
+	def dereference(self, value):
+		self._dereference = value
+	@property
+	def string_description(self):
+		return self._string_description
+	@string_description.setter
+	def string_description(self, value):
+		self._string_description = value
+	@property
+	def summary(self):
+		return self._summary
+	@summary.setter
+	def summary(self, value):
+		self._summary = value
+	@property
+	def is_pointer(self):
+		return self._is_pointer
+	@is_pointer.setter
+	def is_pointer(self, value):
+		self._is_pointer = value
+	def __repr__(self):
+		rep = "{"
+		if self.name:
+			rep = RSTLAppendValue('name', self.name, rep)
+		if self.value:
+			rep = RSTLAppendValue('value', self.value, rep)
+		if self.is_pointer:
+			rep = RSTLAppendValue('is_pointer', self.is_pointer, rep)
+		if self.dereference:
+			rep = RSTLAppendValue('dereference', self.dereference, rep)
+		if self.string_description:
+			rep = RSTLAppendValue('string_description', self.string_description.replace("\n", ""), rep)
+		if self.summary:
+			rep = RSTLAppendValue('summary', self.summary, rep)
+		rep += "}"
+		return rep
+
+class RSTLStackFrame(object):
+	# An individual stack frame in a stack trace
+	_function_name = None
+	_is_inline = False
+	_variables = None
+	def __init__(self, frame):
+		self.variables = list()
+		function_info = self.GetFunctionInfoForFrame(frame)
+		self.function_name = function_info[0]
+		self.is_inline = function_info[1]
+		if frame.line_entry.IsValid():
+			variables = frame.GetVariables(True, True, False, True)
+			for variable in variables:
+				name = variable.name
+				if name:
+					self.AddVariable(RSTLCapturedVariable(variable));
+	@property
+	def function_name(self):
+		return self._function_name
+	@function_name.setter
+	def function_name(self, value):
+		self._function_name = value
+	@property
+	def is_inline(self):
+		return self._is_inline
+	@is_inline.setter
+	def is_inline(self, value):
+		self._is_inline = value
+	def AddVariable(self, value):
+		if value:
+			self.variables.append(value)
+	def GetFunctionInfoForFrame(self, frame):
+		inline_block = frame.GetBlock().GetContainingInlinedBlock()
+		if (inline_block.IsValid()):
+			return (inline_block.GetInlinedName(), True)
+		else:
+			function_name = frame.GetFunction().GetName()
+			if not function_name:
+				function_name = frame.GetSymbol().GetName()
+			return (function_name, False)
+	def __repr__(self):
+		rep = "{"
+		if self.function_name:
+			rep += "\n	'function_name': '%s'" % self.function_name
+		if self.is_inline:
+			rep += "\n	'is_inline': '%s'" % self.is_inline
+		if self.variables:
+			rep += "\n	["
+			for variable in self.variables:
+				rep += "\n		%s" % variable
+			rep += "\n	]"
+		rep += "\n}"
+		return rep
+
+
 #######
 # LLDB State Getters
 #######
@@ -62,9 +203,7 @@ def KeyForOptions(options, debugger):
 		invoke = blockCast.GetChildMemberWithName("invoke")
 		key = "%d" % invoke.GetValueAsUnsigned()
 	elif options.argument:
-		# This is a pretty crappy way to resolve the $arg into a memory address, 
-		# hopefully I can find a better
-		# way to do this
+		# Fix this to check the SBValues type and probably use GetValueAsUnsigned for pointers
 		argument = str(options.argument)
 		result = GetSelectedThread(debugger).GetFrameAtIndex(0).EvaluateExpression(argument)
 		key = str(result.GetObjectDescription())
@@ -93,48 +232,11 @@ def GetStackHashMap():
 # Stack Trace
 #######
 
-def DictionaryForSBValue(variable):
-	dictionary = dict()
-	value = variable.value
-	if value:
-		dictionary["value"] = value
-	summary = variable.summary
-	if summary == None:
-		if variable.type.is_pointer:
-			dictionary["deref"] = DictionaryForSBValue(variable.deref)
-		else:
-			dictionary["string_description"] = str(variable)
-	else:
-		dictionary["summary"] = summary
-	return dictionary
-
-def GetFunctionNameForFrame(frame):
-	inline_block = frame.GetBlock().GetContainingInlinedBlock()
-	if (inline_block.IsValid()):
-		return (inline_block.GetInlinedName(), True)
-	else:
-		function_name = frame.GetFunction().GetName()
-		if not function_name:
-			function_name = frame.GetSymbol().GetName()
-		return (function_name, False)
-
-#TODO: This needs a helper function to handle maximum depth and already visited pointers for deref
 def CaptureStackTrace(thread):
 	frame_depth = thread.GetNumFrames()
 	trace = list()
 	for frame_index in range(frame_depth):
-		frame = thread.GetFrameAtIndex(frame_index)
-		frame_dictionary = dict()
-		function = GetFunctionNameForFrame(frame)
-		frame_dictionary["frame"] = function[0]
-		frame_dictionary["is_inline"] = function[1]
-		if frame.line_entry.IsValid():
-			variables = frame.GetVariables(True, True, False, True)
-			for variable in variables:
-				name = variable.name
-				if name:
-					frame_dictionary[variable.name] = DictionaryForSBValue(variable)
-		trace.append(frame_dictionary)
+		trace.append(RSTLStackFrame(thread.GetFrameAtIndex(frame_index)))
 	return trace
 
 #######
