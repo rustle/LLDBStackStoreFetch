@@ -1,1 +1,1 @@
-command script import ~/LLDB/stack_store_fetch.py
+command script import ~/LLDB/StackStore.py
