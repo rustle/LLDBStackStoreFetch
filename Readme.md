@@ -10,4 +10,4 @@ Check out the BlockStack project and it's breakpoints.
 
 #Notes
 
-You might need the Developer Preview of everyones favorite IDE that's under NDA, haven't tested with the current version.
+This has only been tested on Xcode 5. If you're making changes to StackStore.py, you usually don't need to restart Xcode, but once in awhile you do, cause bugs.

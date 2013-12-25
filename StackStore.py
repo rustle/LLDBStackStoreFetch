@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 # 
 #  Created by Doug Russell on 6/14/12.
 #  Copyright (c) 2012 Doug Russell. All rights reserved.
@@ -239,6 +238,15 @@ def CaptureStackTrace(thread):
 		trace.append(RSTLStackFrame(thread.GetFrameAtIndex(frame_index)))
 	return trace
 
+def PrintTraceForKey(key):
+	if key:
+		stack_map = GetStackHashMap()
+		if key in stack_map:
+			trace_list = stack_map[key]
+			for trace in trace_list:
+				for frame in trace:
+					print frame
+
 #######
 # Public API
 #######
@@ -249,25 +257,27 @@ def AppendStack(debugger, command, result, dict):
 	if key:
 		current_stack = CaptureStackTrace(GetSelectedThread(debugger))
 		stack_map = GetStackHashMap()
-		stack_list = None
-		if key in stack_hash_map:
-			stack_list = stack_hash_map[key]
-		if stack_list == None:
-			stack_list = list()
-			stack_hash_map[key] = stack_list
-		stack_list.append(current_stack)
+		trace_list = None
+		if key in stack_map:
+			trace_list = stack_map[key]
+		if trace_list == None:
+			trace_list = list()
+			stack_map[key] = trace_list
+		trace_list.append(current_stack)
 		print "Stored trace for " + key
 	return False
 
 def PrintOriginatingStack(debugger, command, result, dict):
 	frame = GetSelectedFrame(debugger)
 	address = frame.GetFunction().GetStartAddress().GetLoadAddress(GetSelectedTarget(debugger))
-	stack_map = GetStackHashMap()
 	key = "%d" % address
-	trace_list = stack_map[key]
-	for trace in trace_list:
-		for frame in trace:
-			print frame
+	PrintTraceForKey(key)
+	return False
+
+def PrintStack(debugger, command, result, dict):
+	options = ParseCommands(command)
+	key = KeyForOptions(options, debugger)
+	PrintTraceForKey(key)
 	return False
 
 def PrintAllStoredStacks(debugger, command, result, dict):
@@ -279,6 +289,7 @@ def SetDispatchBreakpoints(debugger, command, result, dict):
 	bp = GetSelectedTarget(debugger).BreakpointCreateByName('dispatch_async')
 	debugger.HandleCommand("breakpoint command add -s python {id} -o 'lldb.debugger.HandleCommand(\"append_stack -b -a $arg2\"); return False;'".format(id=bp.GetID()))
 	print "Setup dispatch breakpoints"
+	return False
 
 def __lldb_init_module(debugger, dict):
 	# This initializer is being run from LLDB in the embedded command interpreter
@@ -286,4 +297,5 @@ def __lldb_init_module(debugger, dict):
 	debugger.HandleCommand('command script add -f StackStore.AppendStack append_stack')
 	debugger.HandleCommand('command script add -f StackStore.PrintOriginatingStack print_originating_stack')
 	debugger.HandleCommand('command script add -f StackStore.PrintAllStoredStacks print_stored_stacks')
+	debugger.HandleCommand('command script add -f StackStore.PrintStack print_stack')
 	debugger.HandleCommand('command script add -f StackStore.SetDispatchBreakpoints set_dispatch_breakpoints')
